@@ -1,0 +1,4 @@
+django-elasticsearch-dsl
+channels
+djangorestframework
+django-cors-headers
