@@ -1,5 +1,4 @@
 import json
-import this
 from channels.generic.websocket import WebsocketConsumer
 import threading
 
@@ -36,7 +35,7 @@ class LogsConsumer(WebsocketConsumer):
     search_document = LogsDocument
     kThread = None
     
-    def foo(self):
+    def send_logs(self):
         logs = self.search_document.search().sort({"@timestamp" : {"order" : "desc"}})[0:100].execute()
         serializedResult = self.logs_serializer(logs, many=True)
         self.send(json.dumps(serializedResult.data))
@@ -48,7 +47,7 @@ class LogsConsumer(WebsocketConsumer):
         serializedResult = self.logs_serializer(logs, many=True)        
         self.send(json.dumps(serializedResult.data))
         event = threading.Event()
-        k = ThreadJob(self.foo, event, 2)
+        k = ThreadJob(self.send_logs, event, 2)
         k.start()
         self.kThread = k
 

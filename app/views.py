@@ -1,5 +1,5 @@
 from attr import fields
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,6 +7,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from elasticsearch_dsl import Q
 from app.documents import LogsDocument
 from .serializers import LogsSerializer
+import pandas as pd
 # from rest_framework.parsers import MultiPartParser, FormParser, FileUploadParser
 # from rest_framework.permissions import AllowAny, DjangoModelPermissions, IsAdminUser, IsAuthenticated, SAFE_METHODS
 
@@ -76,11 +77,56 @@ class AllLogs(APIView, LimitOffsetPagination):
     def get(self, request):
         try:
             search = self.search_document.search().sort(
-                {"@timestamp": {"order": "desc"}})[0:100]
+                {"@timestamp": {"order": "desc"}})[0:1000]
             response = search.execute()
             results = self.paginate_queryset(response, request, view=self)
             serializedResult = self.logs_serializer(results, many=True)
 
             return self.get_paginated_response(serializedResult.data)
         except Exception as e:
+            return HttpResponse(e, status=500)
+
+
+class MatriceDeFlux(APIView, LimitOffsetPagination):
+    logs_serializer = LogsSerializer
+    search_document = LogsDocument
+
+    def preprocess_source_ip(self, ip):
+        try:
+            ip = str(ip)
+            splited_ip = ip.split(".")
+            if (len(splited_ip) != 4):
+                return ip
+            else:
+                cleaned_ip = '.'.join(splited_ip[0:2]) + ".x.x"
+                return cleaned_ip
+        except:
+            return ip
+
+    def get(self, request, query):
+        try:
+            search = self.search_document.search().sort(
+                {"@timestamp": {"order": "desc"}})[0:50000]
+            response = search.execute()
+            response = self.logs_serializer(response, many=True)
+
+            # read the response as pandas dataframe
+            pd_response = pd.DataFrame(response.data)
+
+            # clean both destination and source ip (10.20.30.40 ==> 10.20.X.X)
+            pd_response["source_client_group"] = pd_response["Source"].apply(
+                self.preprocess_source_ip)
+            pd_response["destination_client_group"] = pd_response["Destination"].apply(
+                self.preprocess_source_ip)
+
+            # groupe by the cleaned ip to get the matrice
+            pd_response = pd_response.groupby(['source_client_group', 'destination_client_group', 'Destination_Service','Action'])[
+                "source_client_group"].agg([len]).sort_values(by="len", ascending=False)
+            pd_response.reset_index(inplace=True)
+            pd_response = pd_response.to_json(orient="records")
+            
+
+            return JsonResponse(pd_response, safe=False, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(e)
             return HttpResponse(e, status=500)
