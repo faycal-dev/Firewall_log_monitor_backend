@@ -103,10 +103,14 @@ class MatriceDeFlux(APIView, LimitOffsetPagination):
         except:
             return ip
 
-    def get(self, request, query):
+    def get(self, request):
+
         try:
+            GroupBy = request.query_params.get('GroupBy')
+            DetailedDest = request.query_params.get('DetailedDest')
+            DetailedSrc = request.query_params.get('DetailedSrc')
             search = self.search_document.search().sort(
-                {"@timestamp": {"order": "desc"}})[0:50000]
+                {"@timestamp": {"order": "desc"}})[0:500]
             response = search.execute()
             response = self.logs_serializer(response, many=True)
 
@@ -114,17 +118,27 @@ class MatriceDeFlux(APIView, LimitOffsetPagination):
             pd_response = pd.DataFrame(response.data)
 
             # clean both destination and source ip (10.20.30.40 ==> 10.20.X.X)
-            pd_response["source_client_group"] = pd_response["Source"].apply(
-                self.preprocess_source_ip)
-            pd_response["destination_client_group"] = pd_response["Destination"].apply(
-                self.preprocess_source_ip)
+            if (DetailedSrc == "yes"):
+                pd_response["Source"] = pd_response["Source"].apply(
+                    self.preprocess_source_ip)
+
+            if (DetailedDest == "yes"):
+                pd_response["Destination"] = pd_response["Destination"].apply(
+                    self.preprocess_source_ip)
 
             # groupe by the cleaned ip to get the matrice
-            pd_response = pd_response.groupby(['source_client_group', 'destination_client_group', 'Destination_Service','Action'])[
-                "source_client_group"].agg([len]).sort_values(by="len", ascending=False)
+            if (GroupBy == "Source"):
+                pd_response = pd_response.groupby(['Source', 'Destination', 'Destination_Service', 'Action'])[
+                    "Source"].agg([len]).sort_values(by="len", ascending=False)
+            elif (GroupBy == "Destination"):
+                pd_response = pd_response.groupby(['Destination', "Source", 'Destination_Service', 'Action'])[
+                    "Destination"].agg([len]).sort_values(by="len", ascending=False)
+            else:
+                pd_response = pd_response.groupby(['Destination_Service', "Source", 'Destination', 'Action'])[
+                    "Destination_Service"].agg([len]).sort_values(by="len", ascending=False)
+
             pd_response.reset_index(inplace=True)
             pd_response = pd_response.to_json(orient="records")
-            
 
             return JsonResponse(pd_response, safe=False, status=status.HTTP_200_OK)
         except Exception as e:
