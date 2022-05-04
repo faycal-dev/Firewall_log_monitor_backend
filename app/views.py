@@ -110,7 +110,7 @@ class MatriceDeFlux(APIView, LimitOffsetPagination):
             DetailedDest = request.query_params.get('DetailedDest')
             DetailedSrc = request.query_params.get('DetailedSrc')
             search = self.search_document.search().sort(
-                {"@timestamp": {"order": "desc"}})[0:500]
+                {"@timestamp": {"order": "desc"}})[0:100000]
             response = search.execute()
             response = self.logs_serializer(response, many=True)
 
@@ -142,5 +142,46 @@ class MatriceDeFlux(APIView, LimitOffsetPagination):
 
             return JsonResponse(pd_response, safe=False, status=status.HTTP_200_OK)
         except Exception as e:
-            print(e)
+            return HttpResponse(e, status=500)
+
+
+class Stats(APIView, LimitOffsetPagination):
+    logs_serializer = LogsSerializer
+    search_document = LogsDocument
+
+    def preprocess_source_ip(self, ip):
+        try:
+            ip = str(ip)
+            splited_ip = ip.split(".")
+            if (len(splited_ip) != 4):
+                return ip
+            else:
+                cleaned_ip = '.'.join(splited_ip[0:2]) + ".x.x"
+                return cleaned_ip
+        except:
+            return ip
+
+    def get(self, request):
+        try:
+
+            search = self.search_document.search().sort(
+                {"@timestamp": {"order": "desc"}})[0:100000]
+            response = search.execute()
+            response = self.logs_serializer(response, many=True)
+
+            # read the response as pandas dataframe
+            pd_response = pd.DataFrame(response.data)
+
+            Actions = pd_response.Action.value_counts()[:4]
+            pd_response["Source"] = pd_response["Source"].apply(
+                self.preprocess_source_ip)
+
+            # pd_response["Destination"] = pd_response["Destination"].apply(
+            #     self.preprocess_source_ip)
+
+            source_count = pd_response.Source.value_counts()[:7]
+            destination_count = pd_response.Destination.value_counts()[:7]
+
+            return JsonResponse({"Actions": Actions.to_json(), "source": source_count.to_json(), "destination": destination_count.to_json()}, safe=False, status=status.HTTP_200_OK)
+        except Exception as e:
             return HttpResponse(e, status=500)
