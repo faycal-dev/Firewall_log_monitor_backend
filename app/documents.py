@@ -7,7 +7,7 @@ from .models import logs
 class LogsDocument(Document):
     class Index:
         # Name of the Elasticsearch index
-        name = 'logs'
+        name = 'logs2'
         
 
     class Django:

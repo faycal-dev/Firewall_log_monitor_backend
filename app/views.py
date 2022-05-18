@@ -110,7 +110,7 @@ class MatriceDeFlux(APIView, LimitOffsetPagination):
             DetailedDest = request.query_params.get('DetailedDest')
             DetailedSrc = request.query_params.get('DetailedSrc')
             search = self.search_document.search().sort(
-                {"@timestamp": {"order": "desc"}})[0:100000]
+                {"@timestamp": {"order": "desc"}})
             response = search.execute()
             response = self.logs_serializer(response, many=True)
 
@@ -142,6 +142,7 @@ class MatriceDeFlux(APIView, LimitOffsetPagination):
 
             return JsonResponse(pd_response, safe=False, status=status.HTTP_200_OK)
         except Exception as e:
+            print(e)
             return HttpResponse(e, status=500)
 
 
