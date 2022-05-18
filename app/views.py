@@ -1,4 +1,3 @@
-from attr import fields
 from django.http import HttpResponse, JsonResponse
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -6,10 +5,11 @@ from rest_framework.views import APIView
 from rest_framework.pagination import LimitOffsetPagination
 from elasticsearch_dsl import Q
 from app.documents import LogsDocument
-from .serializers import LogsSerializer
+from .serializers import LogsSerializer, MatriceSerializer
 import pandas as pd
+from .models import matrices
 # from rest_framework.parsers import MultiPartParser, FormParser, FileUploadParser
-# from rest_framework.permissions import AllowAny, DjangoModelPermissions, IsAdminUser, IsAuthenticated, SAFE_METHODS
+from rest_framework.permissions import AllowAny
 
 
 class filterLogs(APIView, LimitOffsetPagination):
@@ -186,3 +186,11 @@ class Stats(APIView, LimitOffsetPagination):
             return JsonResponse({"Actions": Actions.to_json(), "source": source_count.to_json(), "destination": destination_count.to_json()}, safe=False, status=status.HTTP_200_OK)
         except Exception as e:
             return HttpResponse(e, status=500)
+        
+
+
+
+class PostList(generics.ListCreateAPIView):
+    permission_classes = [AllowAny] 
+    queryset = matrices.postobjects.all()
+    serializer_class = MatriceSerializer

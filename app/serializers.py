@@ -1,6 +1,6 @@
 from django.db.models import fields
 from rest_framework import serializers
-from app.models import logs
+from app.models import logs, matrices
 
 
 class LogsSerializer(serializers.ModelSerializer):
@@ -19,3 +19,15 @@ class LogsSerializer(serializers.ModelSerializer):
             "Action",
             "Description",
             "Event_ID",)
+
+
+class MatriceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = matrices
+        fields = ("date",
+                  "group_by_order",
+                  "Source",
+                  "Destination",
+                  "Destination_Service",
+                  "Action",
+                  "Number_of_hits",)
