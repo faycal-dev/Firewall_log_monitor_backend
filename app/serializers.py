@@ -24,4 +24,4 @@ class LogsSerializer(serializers.ModelSerializer):
 class MatriceSerializer(serializers.ModelSerializer):
     class Meta:
         model = matrices
-        fields = ("data","date")
+        fields = ("data", "groupeByValue", "title", "date")
