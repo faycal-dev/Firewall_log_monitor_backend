@@ -1,3 +1,4 @@
+import json
 from django.http import HttpResponse, JsonResponse
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -186,11 +187,25 @@ class Stats(APIView, LimitOffsetPagination):
             return JsonResponse({"Actions": Actions.to_json(), "source": source_count.to_json(), "destination": destination_count.to_json()}, safe=False, status=status.HTTP_200_OK)
         except Exception as e:
             return HttpResponse(e, status=500)
-        
 
 
+class SavedMatrices(APIView):
+    serializer_class = MatriceSerializer
 
-class PostList(generics.ListCreateAPIView):
-    permission_classes = [AllowAny] 
-    queryset = matrices.postobjects.all()
+    def post(self, request):
+        try:
+            serializer = self.serializer_class(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return HttpResponse(e, status=500)
+    
+            
+
+
+class GetSavedMatrices(generics.ListAPIView):
+    queryset = matrices.objects.all()
     serializer_class = MatriceSerializer

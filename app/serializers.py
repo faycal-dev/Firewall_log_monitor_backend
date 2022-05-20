@@ -24,10 +24,4 @@ class LogsSerializer(serializers.ModelSerializer):
 class MatriceSerializer(serializers.ModelSerializer):
     class Meta:
         model = matrices
-        fields = ("date",
-                  "group_by_order",
-                  "Source",
-                  "Destination",
-                  "Destination_Service",
-                  "Action",
-                  "Number_of_hits",)
+        fields = ("data","date")

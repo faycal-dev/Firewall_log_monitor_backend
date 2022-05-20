@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import filterLogs, AllLogs, filterIpLogs, filterDateLogs, MatriceDeFlux, Stats
+from .views import filterLogs, AllLogs, filterIpLogs, filterDateLogs, MatriceDeFlux, Stats, SavedMatrices, GetSavedMatrices
 
 urlpatterns = [
     path('severity/<str:query>/',filterLogs.as_view(), name='filterLogs' ),
@@ -8,4 +8,6 @@ urlpatterns = [
     path('MatriceDeFlux/',MatriceDeFlux.as_view(), name='MatriceDeFlux' ),
     path('stats/',Stats.as_view(), name='stats' ),
     path('severity/',AllLogs.as_view(), name='filterLogs' ),
+    path('saved_logs/',SavedMatrices.as_view(), name='SavedLogs' ),
+    path('get_saved_logs/',GetSavedMatrices.as_view(), name='GetSavedLogs' ),
 ]

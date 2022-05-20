@@ -20,18 +20,17 @@ class logs(models.Model):
 
     def __str__(self):
         return self.Event_Type_ID
-    
+ 
 
 class matrices(models.Model):
     
     date = models.DateTimeField(default=timezone.now)
-    group_by_order = models.CharField(max_length=100)
-    Source = models.CharField(max_length=100)
-    Destination = models.CharField(max_length=100)
-    Destination_Service = models.CharField(max_length=100)
-    Action = models.CharField(max_length=100)
-    Number_of_hits = models.IntegerField()
+    # group_by_order = models.CharField(max_length=100)
+    data = models.JSONField(default='{}')
     
 
     def __str__(self):
-        return self.date
+        return self.date   
+
+
+    
