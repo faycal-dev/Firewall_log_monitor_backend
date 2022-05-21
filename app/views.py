@@ -85,6 +85,7 @@ class AllLogs(APIView, LimitOffsetPagination):
 
             return self.get_paginated_response(serializedResult.data)
         except Exception as e:
+            print(e)
             return HttpResponse(e, status=500)
 
 

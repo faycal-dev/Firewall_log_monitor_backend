@@ -18,7 +18,7 @@ class LogsSerializer(serializers.ModelSerializer):
             "Destination_Service",
             "Action",
             "Description",
-            "Event_ID",)
+            )
 
 
 class MatriceSerializer(serializers.ModelSerializer):
