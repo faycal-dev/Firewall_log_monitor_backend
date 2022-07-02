@@ -7,10 +7,15 @@ from rest_framework.pagination import LimitOffsetPagination
 from elasticsearch_dsl import Q
 from app.documents import LogsDocument
 from .serializers import LogsSerializer, MatriceSerializer
+from .models import matrice
 import pandas as pd
-from .models import matrices
+from tensorflow.keras.models import load_model
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+import numpy as np
+import pickle
 # from rest_framework.parsers import MultiPartParser, FormParser, FileUploadParser
-from rest_framework.permissions import AllowAny
+# from rest_framework.permissions import AllowAny
 
 
 class filterLogs(APIView, LimitOffsetPagination):
@@ -202,11 +207,75 @@ class SavedMatrices(APIView):
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            print(e)
             return HttpResponse(e, status=500)
     
             
 
 
 class GetSavedMatrices(generics.ListAPIView):
-    queryset = matrices.objects.all()
+    queryset = matrice.objects.all()
     serializer_class = MatriceSerializer
+    
+    
+
+class VerifyAnomaly(APIView):
+    serializer_class = LogsSerializer
+    
+    sc = pickle.load(
+        open('C:/Users/hp/Desktop/PFE/Back/app/ai/scaler.pkl', 'rb'))
+    model = load_model(
+        'C:/Users/hp/Desktop/PFE/Back/app/ai/anomaly_detector.h5')
+    model.load_weights(
+        'C:/Users/hp/Desktop/PFE/Back/app/ai/anomaly_detector.weights.h5')
+    
+    def preprocess(self, df):
+        df = df[['proto', 'state', 'dur', 'spkts', 'dpkts', 'sbytes', 'dbytes', 'sttl',
+                 'dttl', 'sload', 'dload', 'sloss', 'dloss', 'sinpkt', 'dinpkt', 'sjit',
+                 'djit', 'swin', 'stcpb', 'dtcpb', 'dwin', 'tcprtt', 'synack', 'ackdat',
+                 'smean', 'dmean', 'ct_srv_src', 'ct_dst_ltm', 'ct_src_dport_ltm',
+                 'ct_dst_sport_ltm', 'ct_dst_src_ltm', 'ct_src_ltm', 'ct_srv_dst',
+                 'is_sm_ips_ports']]
+
+        hot_coded_1 = ['None', 'arp', 'ospf', 'tcp', 'udp', 'unas']
+        hot_coded_2 = ['CON', 'FIN', 'INT', 'None', 'REQ', 'RST']
+        X = []
+        for i in hot_coded_1:
+            if (df['proto'] == i):
+                X.append(1)
+            else:
+                X.append(0)
+        for i in hot_coded_2:
+            if (df['state'] == i):
+                X.append(1)
+            else:
+                X.append(0)
+        df.drop(["proto", "state"], inplace=True)
+        df = df.to_list()
+        X = np.concatenate((X, df), axis=0)
+        # now we will standerize the data the first 12 column is categorical we won't std them
+        X = np.array(X)
+        X = np.expand_dims(X, axis=0)
+        X[:, 13:] = self.sc.transform(X[:, 13:])
+        X = X.reshape(1, 1, 44)
+        prediction = self.model.predict(X)
+        if (np.argmax(prediction[0][0]) == 1 and prediction[0][0][1] > 0.97):
+            return 1
+        return 0
+
+    def post(self, request):
+        try:
+            data=request.data,
+            pd_response = pd.DataFrame(data[0])
+            for i in range(pd_response.shape[0]):
+                if (pd_response.iloc[i]["Action"] in ['built', 'accept', 'successful']):
+                    if (self.preprocess(pd_response.iloc[i]) == 1):
+                        json_anomaly = {"Anomaly": True,
+                                        "data": pd_response.iloc[i].to_dict()}
+                        print("anomaly")
+                        return HttpResponse(json.dumps(json_anomaly), status=status.HTTP_200_OK)
+            return HttpResponse(json.dumps({"Anomaly":False}), status=status.HTTP_400_BAD_REQUEST)
+            # return JsonResponse(json.dumps({"haha":False}), status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(e)
+            return HttpResponse(e, status=500)

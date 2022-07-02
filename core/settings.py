@@ -102,7 +102,7 @@ DATABASES = {
 
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': '192.168.59.52:9200'
+        'hosts': '192.168.53.52:9200'
     },
 }
 
